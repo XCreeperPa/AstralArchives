@@ -1,4 +1,6 @@
 from ui.main_menu import main_menu
 
+import asyncio
+
 if __name__ == "__main__":
-    main_menu()
+    asyncio.run(main_menu())

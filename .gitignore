@@ -15,3 +15,8 @@ wiki/
 
 # 日志
 log/
+
+# 配置文件
+config/categories.json
+uv.lock
+AstralArchives.egg-info/

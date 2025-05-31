@@ -1,15 +1,27 @@
 from rich.console import Console
-import asyncio
+import json
+from pathlib import Path
 from crawler.crawl_main import run_crawl
 
-def crawl_menu():
+import asyncio
+
+async def crawl_menu():
     console = Console()
     console.clear()
     console.rule("[bold cyan]爬虫启动")
-    try:
-        asyncio.run(run_crawl(None))
-    except KeyboardInterrupt:
-        console.print("[red]用户中断。")
-    except Exception as e:
-        console.print(f"[red]程序异常终止: {e}")
+    # 直接读取所有 enabled 分类
+    config_path = Path(__file__).parent.parent / "config/categories.json"
+    if not config_path.exists():
+        console.print("[red]未找到 config/categories.json！")
+        console.input("\n按回车返回主菜单...")
+        return
+    with open(config_path, "r", encoding="utf-8") as f:
+        categories = json.load(f)
+    enabled = [k for k, v in categories.items() if v.get("enabled")]
+    if not enabled:
+        console.print("[yellow]没有启用的分类，请先在 config/categories.json 启用分类。")
+        console.input("\n按回车返回主菜单...")
+        return
+    console.print(f"[green]将自动爬取以下分类：\n{', '.join(enabled)}")
+    await run_crawl(enabled)
     console.input("\n按回车返回主菜单...")

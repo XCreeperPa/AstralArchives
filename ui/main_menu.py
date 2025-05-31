@@ -1,13 +1,16 @@
 import sys
+import asyncio
 from rich.console import Console
 from rich.prompt import Prompt
+
+from ui.category_manage_view import category_manage_menu
 from .readme_view import show_readme
 from .crawl_view import crawl_menu
-from .config_view import config_menu
+from .category_manage_view import category_manage_menu
 
 console = Console()
 
-def main_menu():
+async def main_menu():
     while True:
         console.clear()
         console.rule("[bold cyan]星穹智库 - 主菜单")
@@ -23,6 +26,9 @@ def main_menu():
         elif choice == "1":
             show_readme()
         elif choice == "2":
-            crawl_menu()
+            await crawl_menu()
         elif choice == "3":
-            config_menu()
+            category_manage_menu()
+
+if __name__ == "__main__":
+    asyncio.run(main_menu())

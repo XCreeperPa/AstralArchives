@@ -45,7 +45,7 @@
     "enabled": false
   },
   "光锥": {
-    "enabled": true
+    "enabled": false
   },
   "光锥经验材料": {
     "enabled": false
@@ -138,10 +138,10 @@
     "enabled": false
   },
   "开拓任务": {
-    "enabled": true
+    "enabled": false
   },
   "开拓续闻": {
-    "enabled": true
+    "enabled": false
   },
   "弃用": {
     "enabled": false
@@ -318,7 +318,7 @@
     "enabled": false
   },
   "角色": {
-    "enabled": true
+    "enabled": false
   },
   "角色晋阶材料": {
     "enabled": false

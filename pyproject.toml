@@ -1,0 +1,27 @@
+[project]
+name = "AstralArchives"
+version = "0.1.0"
+description = "星穹智库：星穹铁道设定（角色、剧情、世界观）智能分析系统"
+authors = [
+    {name = "XCreeperPa", email = "XCreeperPa@qq.com"}  # 正确的作者对象格式
+]
+license = "MIT"
+requires-python = ">=3.8"
+dependencies = [
+    "pymilvus",
+    "httpx",
+    "rich",
+    "aiofiles",
+    "aiohttp",
+    "mwparserfromhell"
+]
+
+[build-system]
+requires = ["setuptools>=65.5.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv]
+index-url = "https://mirrors.aliyun.com/pypi/simple/"
+
+[tool.setuptools]
+packages = ["ui", "config", "crawler"]
