@@ -2,70 +2,63 @@
 
 星穹铁道设定（角色、剧情、世界观）智能分析系统。
 
-本项目通过高并发爬虫自动抓取 https://wiki.biligame.com/sr/ 的 MediaWiki 分类与页面内容，聚焦于角色、剧情、世界观等设定内容，不涉及战斗、数值、配队分析。
+---
 
-## 功能简介
-- 基于 aiohttp 的高性能并发爬虫
-- rich 交互式命令行界面，实时进度显示
-- 自动重试与异常处理机制
-- 分类可配置，按需抓取
-- 分类与页面源码本地化存储
-- 完整的日志记录系统
+## 项目结构
 
-## 技术特性
-- 异步并发：使用 aiohttp 进行高性能网络请求
-- 自动重试：网络异常自动重试，默认最多 5 次
-- 高并发控制：自适应并发量（分类32并发，页面256并发）
-- 实时进度：rich 提供的优雅进度显示
-- 异常处理：详细的错误日志，失败统计
-- 本地化存储：自动创建目录结构，保存页面内容
+```
+AstralArchives/
+├─ crawler/                # 爬虫相关（主流程、分类、页面、存储、日志）
+│   ├─ __init__.py
+│   ├─ crawl_main.py       # 主爬虫逻辑（原main.py迁移）
+│   └─ run.py              # 预留爬虫入口
+│   ...
+├─ ui/                     # 命令行界面相关
+│   ├─ __init__.py
+│   ├─ main_menu.py        # 主菜单
+│   ├─ readme_view.py      # rich展示README
+│   ├─ crawl_view.py       # 爬虫启动界面
+│   └─ config_view.py      # 分类管理界面（预留）
+│   ...
+├─ config/                 # 分类配置
+│   └─ categories.json
+├─ wiki/                   # 分类与页面源码存储（自动生成）
+├─ log/                    # 运行日志（自动生成）
+├─ main.py                 # 入口，只负责调度主菜单
+├─ README.md               # 项目说明
+├─ requirements.txt        # 依赖（可选）
+├─ uv.toml                 # 依赖与虚拟环境配置（推荐uv）
+```
+
+---
 
 ## 使用说明
 
-### 环境准备
-本项目推荐使用 [uv](https://github.com/astral-sh/uv) 进行依赖与虚拟环境管理。
+1. 安装依赖（推荐 [uv](https://github.com/astral-sh/uv)）：
+   ```bash
+   uv venv
+   uv pip install -r uv.toml
+   ```
+2. 启动主菜单：
+   ```bash
+   python main.py
+   ```
+3. 按菜单提示操作。
 
-- 初始化虚拟环境：`uv venv`
-- 安装依赖：`uv pip install -r uv.toml`
+## 主要功能
 
-### 启动方式
-- 交互式（默认）：
-  ```bash
-  .venv/bin/python main.py
-  ```
-  自动按 config/categories.json 启用分类批量爬取。
+- rich 交互式命令行主菜单
+- rich 渲染 README
+- 爬虫高并发抓取 wiki 分类与页面
+- 分类配置管理（预留）
 
-- 指定分类（命令行参数）：
-  ```bash
-  .venv/bin/python main.py 分类1 分类2 ...
-  ```
-  只爬取指定分类（如：`NPC`）。
+## 目录说明
 
-### 目录结构
-- `./config/` 分类配置文件（首次运行自动生成）
-- `./wiki/` 分类与页面源码存储
-- `./log/` 运行日志，包含失败记录
-  - 日志文件格式：`YYYYMMDD_HHMMSS.log`
-
-### 进度显示
-- 全局进度：显示所有页面的总体完成情况
-- 分类进度：显示当前分类的完成情况
-- 耗时统计：显示操作耗时
-- 失败统计：显示失败的分类和页面
-
-### 错误处理
-- 网络错误自动重试
-- 失败信息实时显示
-- 详细错误日志
-- 最终统计报告
-
-如需添加依赖，请编辑 `uv.toml` 并用 `uv pip install`。
-
-## 性能优化
-- 使用 aiohttp 替代 httpx 提升并发性能
-- 自适应并发控制避免请求过载
-- 异步日志系统避免 I/O 阻塞
-- 简化了文件操作逻辑
+- `crawler/`    爬虫主流程与实现
+- `ui/`         每个主菜单功能一个界面模块
+- `config/categories.json` 分类配置
+- `wiki/`       页面源码本地化存储
+- `log/`        日志
 
 ---
 
