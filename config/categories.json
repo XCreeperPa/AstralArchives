@@ -1,0 +1,377 @@
+{
+  "Brecentchanges": {
+    "enabled": true
+  },
+  "Fxvv": {
+    "enabled": true
+  },
+  "Gzbh": {
+    "enabled": true
+  },
+  "Imported vocabulary": {
+    "enabled": true
+  },
+  "NPC": {
+    "enabled": true
+  },
+  "专辑": {
+    "enabled": true
+  },
+  "世界货币": {
+    "enabled": true
+  },
+  "丰饶祝福": {
+    "enabled": true
+  },
+  "书籍": {
+    "enabled": true
+  },
+  "事件": {
+    "enabled": true
+  },
+  "交互事件": {
+    "enabled": true
+  },
+  "任务": {
+    "enabled": true
+  },
+  "任务道具": {
+    "enabled": true
+  },
+  "位面饰品": {
+    "enabled": true
+  },
+  "侵蚀隧洞": {
+    "enabled": true
+  },
+  "光锥": {
+    "enabled": true
+  },
+  "光锥经验材料": {
+    "enabled": true
+  },
+  "光锥获取": {
+    "enabled": true
+  },
+  "兑换道具": {
+    "enabled": true
+  },
+  "公告": {
+    "enabled": true
+  },
+  "关卡": {
+    "enabled": true
+  },
+  "其他": {
+    "enabled": true
+  },
+  "冒险任务": {
+    "enabled": true
+  },
+  "凝滞虚影": {
+    "enabled": true
+  },
+  "前瞻直播": {
+    "enabled": true
+  },
+  "加权奇物": {
+    "enabled": true
+  },
+  "包含定制样式的导航栏模板": {
+    "enabled": true
+  },
+  "历战余响": {
+    "enabled": true
+  },
+  "合成素材": {
+    "enabled": true
+  },
+  "同行任务": {
+    "enabled": true
+  },
+  "同谐祝福": {
+    "enabled": true
+  },
+  "含有受损文件链接的页面": {
+    "enabled": true
+  },
+  "周年活动": {
+    "enabled": true
+  },
+  "商店礼包": {
+    "enabled": true
+  },
+  "在模板调用中使用重复参数的页面": {
+    "enabled": true
+  },
+  "地区": {
+    "enabled": true
+  },
+  "头像": {
+    "enabled": true
+  },
+  "奇物": {
+    "enabled": true
+  },
+  "存护祝福": {
+    "enabled": true
+  },
+  "对话框": {
+    "enabled": true
+  },
+  "巡猎祝福": {
+    "enabled": true
+  },
+  "差分宇宙": {
+    "enabled": true
+  },
+  "已索引页面": {
+    "enabled": true
+  },
+  "帕姆衣装": {
+    "enabled": true
+  },
+  "常规活动": {
+    "enabled": true
+  },
+  "常驻活动": {
+    "enabled": true
+  },
+  "开拓任务": {
+    "enabled": true
+  },
+  "开拓续闻": {
+    "enabled": true
+  },
+  "弃用": {
+    "enabled": true
+  },
+  "引用模板后大小超过限制的页面": {
+    "enabled": true
+  },
+  "待补充": {
+    "enabled": true
+  },
+  "成就": {
+    "enabled": true
+  },
+  "战斗": {
+    "enabled": true
+  },
+  "手机壁纸": {
+    "enabled": true
+  },
+  "手机壳": {
+    "enabled": true
+  },
+  "扩展深度超出限制的页面": {
+    "enabled": true
+  },
+  "扩展装置": {
+    "enabled": true
+  },
+  "拟造花萼": {
+    "enabled": true
+  },
+  "拟造花萼（赤）": {
+    "enabled": true
+  },
+  "拟造花萼（金）": {
+    "enabled": true
+  },
+  "探索": {
+    "enabled": true
+  },
+  "攻略": {
+    "enabled": true
+  },
+  "敌人": {
+    "enabled": true
+  },
+  "新手教程": {
+    "enabled": true
+  },
+  "方程": {
+    "enabled": true
+  },
+  "施工中": {
+    "enabled": true
+  },
+  "日常任务": {
+    "enabled": true
+  },
+  "星神考据": {
+    "enabled": true
+  },
+  "智识祝福": {
+    "enabled": true
+  },
+  "有忽略显示标题的页面": {
+    "enabled": true
+  },
+  "权杖": {
+    "enabled": true
+  },
+  "材料": {
+    "enabled": true
+  },
+  "模拟宇宙": {
+    "enabled": true
+  },
+  "模板": {
+    "enabled": true
+  },
+  "模板说明": {
+    "enabled": true
+  },
+  "欢愉祝福": {
+    "enabled": true
+  },
+  "正在计时的页面": {
+    "enabled": true
+  },
+  "毁灭祝福": {
+    "enabled": true
+  },
+  "永久活动": {
+    "enabled": true
+  },
+  "活动": {
+    "enabled": true
+  },
+  "活动任务": {
+    "enabled": true
+  },
+  "消耗品": {
+    "enabled": true
+  },
+  "消耗品（道具）": {
+    "enabled": true
+  },
+  "游戏内容梳理": {
+    "enabled": true
+  },
+  "游戏内容考据": {
+    "enabled": true
+  },
+  "版本更新": {
+    "enabled": true
+  },
+  "版本活动": {
+    "enabled": true
+  },
+  "特殊活动": {
+    "enabled": true
+  },
+  "短信": {
+    "enabled": true
+  },
+  "碟片": {
+    "enabled": true
+  },
+  "祝福": {
+    "enabled": true
+  },
+  "祝福考据": {
+    "enabled": true
+  },
+  "稀有货币": {
+    "enabled": true
+  },
+  "系列任务": {
+    "enabled": true
+  },
+  "繁育祝福": {
+    "enabled": true
+  },
+  "组件": {
+    "enabled": true
+  },
+  "网页活动": {
+    "enabled": true
+  },
+  "考据": {
+    "enabled": true
+  },
+  "背景考据": {
+    "enabled": true
+  },
+  "藏品": {
+    "enabled": true
+  },
+  "虚无祝福": {
+    "enabled": true
+  },
+  "行迹材料": {
+    "enabled": true
+  },
+  "行迹材料、光锥晋阶材料": {
+    "enabled": true
+  },
+  "行迹材料、角色晋阶材料": {
+    "enabled": true
+  },
+  "装饰": {
+    "enabled": true
+  },
+  "装饰获取": {
+    "enabled": true
+  },
+  "角色": {
+    "enabled": true
+  },
+  "角色晋阶材料": {
+    "enabled": true
+  },
+  "角色经验材料": {
+    "enabled": true
+  },
+  "角色考据": {
+    "enabled": true
+  },
+  "角色获取": {
+    "enabled": true
+  },
+  "角色语音": {
+    "enabled": true
+  },
+  "角色资料": {
+    "enabled": true
+  },
+  "记忆祝福": {
+    "enabled": true
+  },
+  "说明": {
+    "enabled": true
+  },
+  "贵重物品": {
+    "enabled": true
+  },
+  "跃迁道具": {
+    "enabled": true
+  },
+  "通用货币": {
+    "enabled": true
+  },
+  "道具": {
+    "enabled": true
+  },
+  "遗器": {
+    "enabled": true
+  },
+  "遗器经验材料": {
+    "enabled": true
+  },
+  "随宠": {
+    "enabled": true
+  },
+  "隐藏分类": {
+    "enabled": true
+  },
+  "隧洞遗器": {
+    "enabled": true
+  },
+  "额外活动": {
+    "enabled": true
+  }
+}

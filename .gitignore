@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+
+# uv
+.uv/
+
+# 编辑器/系统
+.vscode/
+.idea/
+.DS_Store
+
+# 爬虫数据
+wiki/

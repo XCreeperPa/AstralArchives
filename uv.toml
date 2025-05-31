@@ -1,0 +1,16 @@
+[project]
+name = "AstralArchives"
+description = "星穹智库：星穹铁道设定（角色、剧情、世界观）智能分析系统"
+authors = ["Your Name <your@email.com>"]
+license = "MIT"
+
+[dependencies]
+uv = "*"
+httpx = "*"
+rich = "*"
+aiofiles = "*"
+aiohttp = "*"
+mwparserfromhell = "*"
+
+[tool.uv]
+virtualenvs.in-project = true
