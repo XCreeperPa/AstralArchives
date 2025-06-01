@@ -7,6 +7,11 @@ import pickle
 import zipfile
 from pathlib import Path
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
+import asyncio
+import sys
+
+# 兼容旧接口，推荐直接用 main_embedding.py
+from .main_embedding import embed_and_store_all_in_one, search_all_in_one
 
 def slice_content(content, max_length=5000, context_length=50):
     """
@@ -76,76 +81,6 @@ def search_faiss_db(index, query_embedding: np.ndarray, k: int = 1):
     D, I = index.search(query_embedding.reshape(1, -1), k)  # type: ignore
     return D, I
 
-def embed_and_store(data_dir, db_path, api_url, api_key):
-    """
-    嵌入数据并存储到FAISS数据库。
-    """
-    files = list(Path(data_dir).glob("*.json"))
-    if not files:
-        print("[无可嵌入的数据]")
-        return
-
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    if os.path.exists(db_path):
-        index = faiss.read_index(db_path)
-    else:
-        index = None
-
-    with Progress(
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("{task.completed}/{task.total}"),
-        TimeElapsedColumn(),
-        TimeRemainingColumn(),
-        transient=False
-    ) as progress:
-        task = progress.add_task("嵌入数据中", total=len(files))
-
-        for file in files:
-            with open(file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            content = data.get("content", "")
-            meta = json.dumps(data.get("meta", {}), ensure_ascii=False)
-
-            if len(meta) > 2000:
-                print(f"[跳过] {file.name} 的meta字段过长")
-                progress.update(task, advance=1)
-                continue
-
-            if len(content) > 5000:
-                slices = slice_content(content)
-            else:
-                slices = [content]
-
-            embeddings = []
-            for i in range(0, len(slices), 30):
-                batch = slices[i:i+30]
-                payload = {
-                    'model': 'BAAI/bge-m3',
-                    'input': batch,
-                    'encoding_format': 'float'
-                }
-                headers = {
-                    'Authorization': f'Bearer {api_key}',
-                    'Content-Type': 'application/json'
-                }
-                response = httpx.post(api_url, headers=headers, json=payload, timeout=60)
-                response.raise_for_status()
-                embeddings.extend(response.json()['data'])
-
-            vectors = np.array([e['embedding'] for e in embeddings], dtype='float32')
-
-            if index is None:
-                index = faiss.IndexFlatL2(vectors.shape[1])
-
-            index.add(vectors) # type: ignore
-            faiss.write_index(index, db_path)
-
-            progress.update(task, advance=1)
-
-    print("[嵌入完成]")
-
 def search_vectors(query_text: str, db_path: str, api_url: str, api_key: str, k: int = 1):
     """
     使用查询文本在向量数据库中检索。
@@ -163,7 +98,7 @@ def search_vectors(query_text: str, db_path: str, api_url: str, api_key: str, k:
     D, I = search_faiss_db(index, query_embedding, k=k)
     return D, I
 
-def embed_and_store_all_in_one(data_dir, db_zip_path, api_url, api_key, model='BAAI/bge-m3', max_length=5000, context_length=50):
+def embed_and_store_all_in_one(data_dir, db_zip_path, api_url, api_key, model='BAAI/bge-m3', max_length=5000, context_length=50, max_concurrency=32):
     files = list(sorted(Path(data_dir).glob('*.json')))
     vectors = []
     id2meta = {}
@@ -171,13 +106,81 @@ def embed_and_store_all_in_one(data_dir, db_zip_path, api_url, api_key, model='B
     id2title = {}
     next_id = 0
     total_slices = 0
-    # 预统计总分片数
+    slice_infos = []  # [(slice_text, meta_with_slice, title)]
+    # 预统计总分片数并收集分片信息
     for file in files:
         with open(file, 'r', encoding='utf-8') as f:
             data = json.load(f)
         content = data.get('content', '')
+        meta = data.get('meta', {})
+        title = file.stem
         slices = slice_content(content, max_length=max_length, context_length=context_length)
+        for slice_idx, slice_text in enumerate(slices):
+            meta_with_slice = dict(meta)
+            meta_with_slice['slice_index'] = slice_idx + 1
+            meta_with_slice['origin_title'] = title
+            slice_infos.append((slice_text, meta_with_slice, title))
         total_slices += len(slices)
+
+    async def embed_slice(session, api_url, api_key, model, slice_text):
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
+        payload = {
+            'model': model,
+            'input': [slice_text],
+            'encoding_format': 'float'
+        }
+        for _ in range(3):  # 最多重试3次
+            try:
+                resp = await session.post(api_url, headers=headers, json=payload, timeout=60)
+                resp.raise_for_status()
+                return np.array(resp.json()['data'][0]['embedding'], dtype='float32')
+            except Exception as e:
+                await asyncio.sleep(1)
+        raise RuntimeError(f"嵌入失败: {slice_text[:30]}...")
+
+    async def process_all():
+        sem = asyncio.Semaphore(max_concurrency)
+        from typing import Any
+        results: list[Any] = [None] * len(slice_infos)
+        async with httpx.AsyncClient() as session:
+            async def worker(idx, slice_text, meta_with_slice, title):
+                async with sem:
+                    emb = await embed_slice(session, api_url, api_key, model, slice_text)
+                    results[idx] = (emb, meta_with_slice, slice_text, title)
+                    progress.update(task, advance=1)
+            tasks = [worker(idx, slice_text, meta_with_slice, title)
+                     for idx, (slice_text, meta_with_slice, title) in enumerate(slice_infos)]
+            await asyncio.gather(*tasks)
+        return results
+
+    def run_async(coro):
+        try:
+            import asyncio
+            if sys.version_info >= (3, 7):
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+                if loop and loop.is_running():
+                    import nest_asyncio
+                    nest_asyncio.apply()
+                    return loop.run_until_complete(coro)
+                else:
+                    return asyncio.run(coro)
+            else:
+                loop = asyncio.get_event_loop()
+                return loop.run_until_complete(coro)
+        except Exception as e:
+            raise e
+
+    if not slice_infos:
+        print('[无可嵌入的数据]')
+        return
+    # 自动创建目标目录
+    os.makedirs(os.path.dirname(db_zip_path), exist_ok=True)
     with Progress(
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
@@ -187,38 +190,16 @@ def embed_and_store_all_in_one(data_dir, db_zip_path, api_url, api_key, model='B
         transient=False
     ) as progress:
         task = progress.add_task("嵌入分片中", total=total_slices)
-        for file in files:
-            with open(file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            content = data.get('content', '')
-            meta = data.get('meta', {})
-            title = file.stem
-            slices = slice_content(content, max_length=max_length, context_length=context_length)
-            for slice_idx, slice_text in enumerate(slices):
-                meta_with_slice = dict(meta)
-                meta_with_slice['slice_index'] = slice_idx + 1
-                meta_with_slice['origin_title'] = title
-                headers = {
-                    'Authorization': f'Bearer {api_key}',
-                    'Content-Type': 'application/json'
-                }
-                payload = {
-                    'model': model,
-                    'input': [slice_text],
-                    'encoding_format': 'float'
-                }
-                response = httpx.post(api_url, headers=headers, json=payload, timeout=60)
-                response.raise_for_status()
-                embedding = response.json()['data'][0]['embedding']
-                vectors.append(np.array(embedding, dtype='float32'))
-                id2meta[next_id] = meta_with_slice
-                id2content[next_id] = slice_text
-                id2title[next_id] = title
-                next_id += 1
-                progress.update(task, advance=1)
-    if not vectors:
-        print('[无可嵌入的数据]')
-        return
+        results = run_async(process_all())
+    for tup in results:
+        if tup is None:
+            continue
+        emb, meta_with_slice, slice_text, title = tup
+        vectors.append(emb)
+        id2meta[next_id] = meta_with_slice
+        id2content[next_id] = slice_text
+        id2title[next_id] = title
+        next_id += 1
     vectors_np = np.stack(vectors)
     dim = vectors_np.shape[1]
     index = faiss.IndexFlatL2(dim)

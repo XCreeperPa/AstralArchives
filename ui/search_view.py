@@ -1,7 +1,6 @@
 from rich.console import Console
 from rich.prompt import Prompt
-from vector_api.embedding import embed_and_store
-from vector_api.embedding import search_all_in_one
+from vector_api.main_embedding import search_all_in_one_meta
 import numpy as np
 import json
 import os
@@ -24,7 +23,7 @@ def search_data_menu():
     try:
         db_zip_path = "./db/wiki_allinone.zip"
         top_k = 10
-        results = search_all_in_one(query, db_zip_path, api_url, api_key, top_k)
+        results = search_all_in_one_meta(query, db_zip_path, api_url, api_key, top_k)
         console.print("[bold green]检索结果（前十）：")
         for result in results:
             console.print_json(data=result)

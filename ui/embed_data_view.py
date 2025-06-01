@@ -1,6 +1,6 @@
 from rich.console import Console
 from rich.prompt import Prompt
-from vector_api.embedding import embed_and_store_all_in_one
+from vector_api.main_embedding import embed_and_store_all_in_one
 from pathlib import Path
 import json
 

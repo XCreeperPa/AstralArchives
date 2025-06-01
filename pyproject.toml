@@ -14,7 +14,8 @@ dependencies = [
     "aiofiles",
     "aiohttp",
     "mwparserfromhell",
-    "faiss-cpu"
+    "faiss-cpu",
+    "nest_asyncio"
 ]
 
 [build-system]
