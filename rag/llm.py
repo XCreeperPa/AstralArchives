@@ -4,9 +4,9 @@ LLM相关接口，便于后续切换模型或多模型支持。
 """
 from langchain_community.chat_models import ChatOpenAI
 
-def get_llm(base_url, api_key, model="deepseek-chat", temperature=0.1, max_tokens=2048):
+def get_llm(base_url, api_key, model="deepseek-chat", temperature=0.3, max_tokens=2048):
     return ChatOpenAI(
-        model=model,
+        model=model, # type: ignore
         temperature=temperature,
         max_tokens=max_tokens,
         api_key=api_key,
