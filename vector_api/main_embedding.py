@@ -23,7 +23,7 @@ def embed_and_store_all_in_one(data_dir, db_zip_path, api_url, api_key, model='B
     next_id = 0
     total_slices = 0
     slice_infos = []  # [(slice_text, meta_with_slice, title, raw_id)]
-    raw_id_map = {}  # 文件名或自定义唯一id -> raw_id
+    # raw_id_map = {}  # 文件名或自定义唯一id -> raw_id
     for file in files:
         with open(file, 'r', encoding='utf-8') as f:
             data = json.load(f)

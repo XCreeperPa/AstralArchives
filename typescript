@@ -1,0 +1,26 @@
+Script started on 2025-06-01 23:46:07+08:00 [COMMAND="python RAGCUI.py" TERM="xterm-256color" TTY="/dev/pts/4" COLUMNS="81" LINES="11"]
+/home/xrp/AstralArchives/rag/llm.py:8: LangChainDeprecationWarning: The class `ChatOpenAI` was deprecated in LangChain 0.0.10 and will be removed in 1.0. An updated version of the class exists in the :class:`~langchain-openai package and should be used instead. To use it run `pip install -U :class:`~langchain-openai` and import as `from :class:`~langchain_openai import ChatOpenAI``.
+  return ChatOpenAI(
+[92m───────────────────────────── [0m[1;36m星穹智库 RAG 智能问答[0m[92m ─────────────────────────────[0m
+[1;33m请输入你的问题 (输入 exit 退出)[0m: nh  你好  ^[[A^CTraceback (most recent call last):
+  File "/home/xrp/AstralArchives/RAGCUI.py", line 50, in <module>
+    # 5. LLM 回答
+^^^^^^
+  File "/home/xrp/AstralArchives/RAGCUI.py", line 24, in main
+    base_url, api_key = load_llm_config()
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xrp/AstralArchives/.venv/lib/python3.11/site-packages/rich/prompt.py", line 149, in ask
+    return _prompt(default=default, stream=stream)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xrp/AstralArchives/.venv/lib/python3.11/site-packages/rich/prompt.py", line 292, in __call__
+    value = self.get_input(self.console, prompt, self.password, stream=stream)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xrp/AstralArchives/.venv/lib/python3.11/site-packages/rich/prompt.py", line 211, in get_input
+    return console.input(prompt, password=password, stream=stream)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xrp/AstralArchives/.venv/lib/python3.11/site-packages/rich/console.py", line 2165, in input
+    result = input()
+             ^^^^^^^
+KeyboardInterrupt
+
+Script done on 2025-06-01 23:46:36+08:00 [COMMAND_EXIT_CODE="130"]

@@ -6,7 +6,7 @@ authors = [
     {name = "XCreeperPa", email = "XCreeperPa@qq.com"}  # 正确的作者对象格式
 ]
 license = "MIT"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
     "pymilvus",
     "httpx",
@@ -15,7 +15,10 @@ dependencies = [
     "aiohttp",
     "mwparserfromhell",
     "faiss-cpu",
-    "nest_asyncio"
+    "nest_asyncio",
+    "langchain",
+    "langchain_community",
+    "openai"  # 新增 openai 依赖
 ]
 
 [build-system]

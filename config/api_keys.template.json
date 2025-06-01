@@ -1,5 +1,9 @@
 {
     "embedding": {
-        "api_key": "your_embedding_api_key_here"
+        "api_key": "your_api_key_here"
+    },
+    "llm": {
+        "base_url": "https://api.deepseek.com",
+        "api_key": "your_api_key_here"
     }
 }
