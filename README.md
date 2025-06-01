@@ -6,10 +6,11 @@
 
 ## 新版本亮点
 
-- **全新 rich 交互式命令行主菜单**，支持一键查看 README、启动爬虫、管理分类。
+- **全新 rich 交互式命令行主菜单**，支持一键查看 README、启动爬虫、管理分类、数据清洗。
 - **分类管理界面**：支持多选、批量启用/禁用、分页浏览，操作直观。
 - **高并发异步爬虫**：支持多分类并发抓取，自动本地化存储页面源码。
-- **配置与日志分离**：所有配置、日志、wiki源码均有独立目录，结构清晰。
+- **数据清洗模块**：支持光锥、角色、任务等分类的结构化清洗，统一输出为 json，带全局进度条。
+- **配置与日志分离**：所有配置、日志、wiki源码、清洗结果均有独立目录，结构清晰。
 - **依赖管理升级**：推荐使用 `venv` + `pip install uv` + `uv sync`，更快更稳定。
 
 ---
@@ -22,15 +23,23 @@ AstralArchives/
 │   ├─ __init__.py
 │   ├─ crawl_main.py       # 主爬虫逻辑
 │   └─ run.py              # 预留爬虫入口
+├─ datacleaner/            # 数据清洗相关（基础与各分类清洗模型、主流程）
+│   ├─ base.py
+│   ├─ character.py        # 角色清洗模型
+│   ├─ lightcone.py        # 光锥清洗模型
+│   ├─ mission.py          # 任务清洗模型
+│   └─ clean_main.py       # 清洗主流程
 ├─ ui/                     # 命令行界面相关
 │   ├─ __init__.py
 │   ├─ main_menu.py        # 主菜单
 │   ├─ readme_view.py      # rich展示README
 │   ├─ crawl_view.py       # 爬虫启动界面
+│   ├─ clean_data_view.py  # 数据清洗界面
 │   └─ category_manage_view.py # 分类管理界面
 ├─ config/                 # 分类配置
 │   └─ categories.json
 ├─ wiki/                   # 分类与页面源码存储（自动生成）
+├─ wiki_cleaned/           # 清洗后json存储（自动生成，全部分类共用）
 ├─ log/                    # 运行日志（自动生成）
 ├─ main.py                 # 入口，只负责调度主菜单
 ├─ README.md               # 项目说明
@@ -67,6 +76,7 @@ AstralArchives/
    - 查看 README
    - 启动爬虫（自动抓取已启用分类）
    - 管理分类（批量启用/禁用）
+   - 清洗数据（结构化输出 json，带进度条）
 
 ---
 
@@ -76,6 +86,7 @@ AstralArchives/
 - rich 渲染 README
 - 高并发异步爬虫，自动本地化存储 wiki 页面源码
 - 分类配置管理（批量、分页、直观）
+- 数据清洗（光锥/角色/任务等，结构化 json，进度条）
 - 日志自动记录
 
 ---
@@ -83,9 +94,11 @@ AstralArchives/
 ## 目录说明
 
 - `crawler/`    爬虫主流程与实现
+- `datacleaner/` 数据清洗主流程与各分类模型
 - `ui/`         每个主菜单功能一个界面模块
 - `config/categories.json` 分类配置
 - `wiki/`       页面源码本地化存储
+- `wiki_cleaned/` 清洗后结构化 json
 - `log/`        日志
 
 ---

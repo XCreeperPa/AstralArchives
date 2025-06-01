@@ -19,7 +19,8 @@ async def main_menu():
         console.print("[yellow]1.[/] 查看README")
         console.print("[yellow]2.[/] 启动爬虫")
         console.print("[yellow]3.[/] 管理分类 (config/categories.json)")
-        choice = Prompt.ask("输入序号", choices=["0","1","2","3"], default="0")
+        console.print("[yellow]4.[/] 清洗数据")
+        choice = Prompt.ask("输入序号", choices=["0","1","2","3","4"], default="0")
         if choice == "0":
             console.print("[green]再见！")
             sys.exit(0)
@@ -29,6 +30,9 @@ async def main_menu():
             await crawl_menu()
         elif choice == "3":
             category_manage_menu()
+        elif choice == "4":
+            from .clean_data_view import clean_data_menu
+            clean_data_menu()
 
 if __name__ == "__main__":
     asyncio.run(main_menu())

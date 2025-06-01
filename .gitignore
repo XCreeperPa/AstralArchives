@@ -12,6 +12,7 @@ __pycache__/
 
 # 爬虫数据
 wiki/
+wiki_cleaned/
 
 # 日志
 log/
