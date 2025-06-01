@@ -7,7 +7,6 @@ from pathlib import Path
 from datacleaner.lightcone import LightconeCleaner
 from datacleaner.character import CharacterCleaner
 from datacleaner.mission import MissionCleaner
-import mwparserfromhell
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 
 def get_cleaner(category: str):
@@ -61,5 +60,8 @@ def clean_all():
             progress.update(task, advance=1)
     print("[数据清洗完成]")
 
-if __name__ == "__main__":
+def clean_and_embed():
     clean_all()
+
+if __name__ == "__main__":
+    clean_and_embed()

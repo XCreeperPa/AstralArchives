@@ -13,6 +13,7 @@ __pycache__/
 # 爬虫数据
 wiki/
 wiki_cleaned/
+db/
 
 # 日志
 log/
@@ -21,3 +22,7 @@ log/
 config/categories.json
 uv.lock
 AstralArchives.egg-info/
+config/api_keys.json
+
+# 测试
+tests/

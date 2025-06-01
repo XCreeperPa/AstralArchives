@@ -3,8 +3,6 @@ import json
 from pathlib import Path
 from crawler.crawl_main import run_crawl
 
-import asyncio
-
 async def crawl_menu():
     console = Console()
     console.clear()

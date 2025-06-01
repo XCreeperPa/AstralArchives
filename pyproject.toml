@@ -13,7 +13,8 @@ dependencies = [
     "rich",
     "aiofiles",
     "aiohttp",
-    "mwparserfromhell"
+    "mwparserfromhell",
+    "faiss-cpu"
 ]
 
 [build-system]
