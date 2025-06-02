@@ -3,6 +3,8 @@
 LLM相关接口，便于后续切换模型或多模型支持。
 """
 from langchain_community.chat_models import ChatOpenAI
+import json
+from pathlib import Path
 
 def get_llm(base_url, api_key, model="deepseek-chat", temperature=0.5, max_tokens=8192):
     return ChatOpenAI(
@@ -13,25 +15,33 @@ def get_llm(base_url, api_key, model="deepseek-chat", temperature=0.5, max_token
         base_url=base_url
     )
 
+def _load_prompts():
+    prompt_path = Path(__file__).parent.parent / "config" / "prompts.json"
+    with open(prompt_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+prompts = _load_prompts()
+
 def extract_user_need(llm, question):
-    prompt = f"""
-你是一个知识库检索助手。请从用户问题中提取最核心的检索需求，输出简明的检索关键词或主题，中文逗号分隔。
-用户问题：{question}
-只输出关键词。
-"""
+    prompt = prompts["extract_need_prompt"].replace("{question}", question)
     result = llm.invoke(prompt)
     return result.content.strip()
 
-def answer_with_rag(llm, question, context):
-    prompt = f"""
-你是《崩坏：星穹铁道》知识库智能问答助手。请结合下方资料片段，回答用户问题。
-
-用户问题：{question}
-
-{context}
-
-请用简洁、准确的语言作答。
-"""
+def answer_with_rag(llm, question, context, dialogue_history=None, system_prompt=None, context_insert=None):
+    # 支持可选参数，便于主流程灵活拼接
+    p = prompts["answer_with_rag_prompt"]
+    if system_prompt is None:
+        system_prompt = prompts.get("system_prompt", "")
+    if dialogue_history is None:
+        dialogue_history = ""
+    if context_insert is None:
+        context_insert = prompts.get("context_insert_format", "# 资料片段\n{context}").replace("{context}", context)
+    prompt = p.format(
+        system_prompt=system_prompt,
+        dialogue_history=dialogue_history,
+        question=question,
+        context_insert=context_insert
+    )
     result = llm.invoke(prompt)
     return result.content.strip()
 
@@ -53,3 +63,8 @@ def extract_key_info_multi_llm(llm_list, context_list):
                 item[name] = f"[提取失败: {e}]"
         results.append(item)
     return results
+
+def extract_user_need_with_history(llm, question, history_str):
+    prompt = prompts["extract_need_with_history_prompt"].replace("{question}", question).replace("{history}", history_str)
+    result = llm.invoke(prompt)
+    return result.content.strip()

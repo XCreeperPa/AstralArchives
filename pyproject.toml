@@ -18,7 +18,8 @@ dependencies = [
     "nest_asyncio",
     "langchain",
     "langchain_community",
-    "openai"  # 新增 openai 依赖
+    "openai",
+    "tiktoken"
 ]
 
 [build-system]
@@ -29,4 +30,4 @@ build-backend = "setuptools.build_meta"
 index-url = "https://mirrors.aliyun.com/pypi/simple/"
 
 [tool.setuptools]
-packages = ["ui", "config", "crawler"]
+packages = ["ui", "config", "crawler", "rag", "vector_api"]
