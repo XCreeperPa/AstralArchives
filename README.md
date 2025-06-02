@@ -71,8 +71,9 @@ AstralArchives/
 
 ## 主要命令与功能
 
-- `python main.py`：启动 rich 主菜单
-- 菜单功能：
+- `python RAGCUI.py`：进入 rich 智能问答界面
+- `python RAGCUI.py --test`：自动批量测试典型问题，输出至 output/A1.md、B1.md、C1.md
+- `python devCUI.py`：
   - 查看 README
   - 启动爬虫（自动抓取已启用分类）
   - 管理分类（批量启用/禁用）

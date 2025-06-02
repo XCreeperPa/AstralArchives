@@ -26,4 +26,4 @@ config/api_keys.json
 
 # 测试
 tests/
-output.md
+output/
