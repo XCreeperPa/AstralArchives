@@ -5,6 +5,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.markdown import Markdown
+from rich.control import Control
 from rag.llm import get_llm, extract_user_need
 from rag.db import search_db
 from rag.utils import load_llm_config, load_multi_llm_config
@@ -12,15 +13,25 @@ from rag.rag_service import get_user_need, retrieve_context, build_history_str, 
 import tempfile
 import subprocess
 import sys
+from rich.live import Live
 
 def better_file_input(prompt):
     with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.txt') as f:
-        f.write(f"# {prompt}\n# 请输入内容后保存退出\n\n")
+        # 写入提示和注释后，多加一个空行，并再加一个空行用于输入
+        f.write(f"# {prompt}\n# 请输入内容后保存退出\n\n\n")
         path = f.name
     editor = os.getenv('EDITOR', 'nano')
+    # 计算光标定位到第5行（前面3行+1空行，用户输入从第5行开始）
+    editor_cmd = ''
+    if 'nano' in editor:
+        editor_cmd = f'{editor} +5 "{path}"'
+    elif 'vim' in editor or 'nvim' in editor:
+        editor_cmd = f'{editor} +5 "{path}"'
+    else:
+        editor_cmd = f'{editor} "{path}"'  # 其他编辑器不保证定位
     print(f"\n即将打开编辑器输入，提示: {prompt}")
     input("请按回车进入编辑器...")
-    subprocess.call(f'{editor} "{path}"', shell=True)
+    subprocess.call(editor_cmd, shell=True)
     with open(path, 'r') as f:
         lines = [line.rstrip() for line in f.readlines() if not line.startswith('#')]
         content = '\n'.join([line for line in lines if line.strip()])
@@ -185,27 +196,37 @@ def main():
         console.print(f"[yellow]本轮Prompt Token数：{prompt_tokens}[/yellow]")
         # 8. LLM 回答
         stream = main_llm.stream(final_prompt)
-        console.print("[bold blue]LLM 正在流式输出回答...\n", style="blue")
         md_buffer = ""
-        for chunk in stream:
-            content = chunk.content if hasattr(chunk, 'content') else chunk
-            if isinstance(content, str):
-                md_buffer = md_buffer + content
-                console.print(content, end="", style="white", soft_wrap=True)
-            elif isinstance(content, list):
-                joined = ''.join(str(item) for item in content)
-                md_buffer = md_buffer + joined
-                console.print(joined, end="", style="white", soft_wrap=True)
-            else:
-                s = str(content)
-                md_buffer = md_buffer + s
-                console.print(s, end="", style="white", soft_wrap=True)
+        token_count = 0
+        from rich.progress import Progress, SpinnerColumn, TextColumn
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            TextColumn("[green]已生成Token数: {task.completed}"),
+            transient=True,
+            console=console
+        ) as progress:
+            task = progress.add_task("LLM 正在生成回答...", total=None)
+            for chunk in stream:
+                content = chunk.content if hasattr(chunk, 'content') else chunk
+                if isinstance(content, str):
+                    md_buffer += content
+                    token_count += count_tokens(content)
+                elif isinstance(content, list):
+                    joined = ''.join(str(item) for item in content)
+                    md_buffer += joined
+                    token_count += count_tokens(joined)
+                else:
+                    s = str(content)
+                    md_buffer += s
+                    token_count += count_tokens(s)
+                progress.update(task, completed=token_count)
         answer_tokens = count_tokens(md_buffer)
+        console.print("[bold green]Markdown 渲染：[/bold green]")
+        console.print(Markdown(md_buffer), soft_wrap=True)
         console.print(f"\n[yellow]本轮LLM输出 Token数：{answer_tokens}[/yellow]")
         with open("output.md", "w", encoding="utf-8") as f:
             f.write(md_buffer)
-        console.print("\n[bold green]Markdown 渲染：[/bold green]")
-        console.print(Markdown(md_buffer), soft_wrap=True)
         console.print("[bold green]内容已保存到 output.md[/bold green]")
         # 9. 更新历史对话
         history.append({"user": question, "assistant": md_buffer})
