@@ -40,11 +40,12 @@ def embed_and_store_all_in_one(data_dir, db_zip_path, api_url, api_key, model='B
             slice_infos.append((slice_text, meta_with_slice, title, raw_id))
         total_slices += len(slices)
     async def embed_slice(session, api_url, api_key, model, slice_text):
-        for _ in range(3):
+        for _ in range(10):  # 重试10次
             try:
                 return await async_embed_text(session, api_url, api_key, slice_text, model)
             except Exception:
-                import asyncio; await asyncio.sleep(1)
+                import asyncio; await asyncio.sleep(2)  # 等待2秒后重试
+        # 如果重试10次仍然失败，则抛出异常
         raise RuntimeError(f"嵌入失败: {slice_text[:30]}...")
     async def process_all():
         import asyncio

@@ -13,7 +13,7 @@ def embed_data_menu():
     config_path = Path("config/api_keys.json")
     if not config_path.exists():
         console.print("[bold red]未找到配置文件 config/api_keys.json")
-        console.input("\n按回车返回主菜单...")
+   
         return
 
     with open(config_path, "r", encoding="utf-8") as f:
@@ -22,7 +22,7 @@ def embed_data_menu():
 
     if not api_key:
         console.print("[bold red]未在配置文件中找到有效的API密钥")
-        console.input("\n按回车返回主菜单...")
+   
         return
 
     # 嵌入数据
@@ -36,5 +36,3 @@ def embed_data_menu():
         console.print("[bold green]数据嵌入完成！")
     except Exception as e:
         console.print(f"[bold red]嵌入失败: {e}")
-
-    console.input("\n按回车返回主菜单...")

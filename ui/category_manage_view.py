@@ -106,7 +106,7 @@ def category_manage_menu():
     changed = [categories[i] for i in sorted(changed_indices)]
     if not changed:
         console.print("[green]未修改任何分类，所有分类状态保持不变。")
-        console.input("\n按回车返回主菜单...")
+   
         return
     # 显示变更表
     table = Table(show_header=True, header_style="bold magenta", show_lines=True)
@@ -135,7 +135,7 @@ def category_manage_menu():
         return category_manage_menu()
     elif action == "取消":
         console.print("[yellow]操作已取消，无更改。")
-        console.input("\n按回车返回主菜单...")
+   
         return
     save_categories(data)
     console.print("[bold green]配置已更新！")

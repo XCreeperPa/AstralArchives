@@ -11,15 +11,12 @@ async def crawl_menu():
     config_path = Path(__file__).parent.parent / "config/categories.json"
     if not config_path.exists():
         console.print("[red]未找到 config/categories.json！")
-        console.input("\n按回车返回主菜单...")
         return
     with open(config_path, "r", encoding="utf-8") as f:
         categories = json.load(f)
     enabled = [k for k, v in categories.items() if v.get("enabled")]
     if not enabled:
         console.print("[yellow]没有启用的分类，请先在 config/categories.json 启用分类。")
-        console.input("\n按回车返回主菜单...")
         return
     console.print(f"[green]将自动爬取以下分类：\n{', '.join(enabled)}")
     await run_crawl(enabled)
-    console.input("\n按回车返回主菜单...")
