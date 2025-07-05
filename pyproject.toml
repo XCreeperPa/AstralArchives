@@ -19,7 +19,10 @@ dependencies = [
     "langchain",
     "langchain_community",
     "openai",
-    "tiktoken"
+    "tiktoken",
+    "fastapi",
+    "uvicorn",
+    "pydantic"
 ]
 
 [build-system]
