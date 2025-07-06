@@ -5,6 +5,16 @@
 
 ---
 
+## ❗️重要更新：RAGCUI.py 已弃用
+
+自 v0.2 起，推荐统一使用 OpenAI 兼容接口进行问答与开发。
+
+- 推荐直接启动服务端（server.py/llm_api.py），通过 `/v1/chat/completions` 提供 OpenAI API 兼容服务。
+- 推荐使用 `client.py` 作为命令行客户端，或任何支持 OpenAI API 的第三方客户端（如 chatbox、openai-python、curl 等）。
+- `RAGCUI.py` 已不再维护，后续功能与体验将全部以 OpenAI 兼容 API 方式为主。
+
+---
+
 ## 项目简介
 
 星穹智库是面向《崩坏：星穹铁道》Wiki数据的智能分析与检索平台，支持多轮对话、上下文感知检索、RAG问答、分片嵌入、配置驱动提示词等全流程，适合知识库、AI问答、内容分析等场景。
@@ -63,15 +73,22 @@ AstralArchives/
    ```bash
    python main.py
    ```
-4. **进入RAG多轮问答界面**
+4. **（已弃用）进入RAG多轮问答界面**
    ```bash
    python RAGCUI.py
    ```
 5. **启动OpenAI兼容API服务端**
    ```bash
+   python server.py  # 推荐
+   # 或
    uvicorn llm_api:app --host 0.0.0.0 --port 8080
    ```
-6. **用chatbox、openai库、curl等客户端对接API**
+6. **推荐用client.py或第三方客户端对接API**
+   - 命令行客户端：
+     ```bash
+     python client.py
+     ```
+   - 也可用 chatbox、openai库、curl 等
    - API地址：`http://<服务器IP>:8080/v1`
    - API Key：`test`
    - 完全兼容OpenAI官方API格式，支持流式/非流式、历史对话、token统计、Markdown结构化输出。
@@ -98,16 +115,10 @@ AstralArchives/
 
 ## 主要命令与功能
 
-- `python RAGCUI.py`：进入 rich 智能多轮问答界面（支持上下文感知检索、Token统计、配置驱动提示词）
-- `python RAGCUI.py --test`：自动批量测试典型问题，输出至 output/A1.md、B1.md、C1.md
-- `python devCUI.py`：
-  - 查看README
-  - 启动爬虫（自动抓取已启用分类）
-  - 管理分类（批量启用/禁用）
-  - 清洗数据（结构化输出json，带进度条）
-  - 数据嵌入（分片、进度条、全自包含zip向量库）
-  - 检索数据（输入关键词，返回前十条分片元数据）
-- `uvicorn llm_api:app --host 0.0.0.0 --port 8080`：启动OpenAI兼容API服务端
+- `python client.py`：推荐命令行智能问答客户端（多轮、历史、Markdown渲染、OpenAI API兼容）
+- `python server.py` 或 `uvicorn llm_api:app --host 0.0.0.0 --port 8080`：启动OpenAI兼容API服务端
+- `python RAGCUI.py`：已弃用，不再维护
+- `python devCUI.py`：其它数据管理与开发工具
 
 ---
 
