@@ -6,6 +6,7 @@ class CharacterCleaner(BaseCleaner):
         super().__init__("角色")
 
     def clean(self, index: int, title: str, raw_text: str):
+        meta = {"category": self.category, "title": title}
         wikicode = mwparserfromhell.parse(raw_text)
         char_template = None
         for t in wikicode.filter_templates():
@@ -16,7 +17,6 @@ class CharacterCleaner(BaseCleaner):
         meta_keys = [
             "名称", "外文名", "称号", "全名", "性别", "稀有度", "限定", "阵营", "命途", "实装日期", "实装版本", "昵称/外号", "派系", "体型", "种族"
         ]
-        meta = {"category": self.category}
         if char_template:
             for key in meta_keys:
                 meta[key] = char_template.get(key).value.strip() if char_template.has(key) else ""

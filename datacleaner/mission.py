@@ -7,6 +7,7 @@ class MissionCleaner(BaseCleaner):
         super().__init__("任务")
 
     def clean(self, index: int, title: str, raw_text: str):
+        meta = {"category": self.category, "title": title}
         wikicode = mwparserfromhell.parse(raw_text)
         mission_template = None
         # 找到任务模板
@@ -27,7 +28,6 @@ class MissionCleaner(BaseCleaner):
             ("后续任务", "后续任务"),
             ("任务流程", "任务流程")
         ]
-        meta = {"category": self.category}
         if mission_template:
             for key, meta_key in meta_keys:
                 if mission_template.has(key):

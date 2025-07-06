@@ -7,7 +7,7 @@ class LightconeCleaner(BaseCleaner):
         super().__init__("光锥")
 
     def clean(self, index: int, title: str, raw_text: str):
-        meta = {"category": self.category}
+        meta = {"category": self.category, "title": title}
         # 解析模板
         wikicode = mwparserfromhell.parse(raw_text)
         lightcone_template = None

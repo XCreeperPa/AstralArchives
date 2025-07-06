@@ -52,19 +52,18 @@ class ChatCompletionResponse(BaseModel):
     choices: List[Choice]
     usage: Usage
 
-# Markdown表格生成，单元格30字内
+# Markdown表格生成，只包含序号和元数据中的title两列
 def meta_to_md_table(meta_list: List[dict]) -> str:
     if not meta_list:
         return "无检索结果"
-    keys = list(meta_list[0].keys())
-    header = "|" + "|".join(keys) + "|\n"
-    sep = "|" + "|".join(["---"] * len(keys)) + "|\n"
+    # 定义表头
+    header = "| 序号 | 标题 |\n"
+    # 定义分隔行
+    sep = "| --- | --- |\n"
     rows = []
-    for meta in meta_list:
-        def short(val):
-            s = str(val)
-            return s[:30] + '...' if len(s) > 30 else s
-        row = "|" + "|".join(short(meta.get(k, "")) for k in keys) + "|"
+    for idx, meta in enumerate(meta_list, start=1):
+        title = meta.get("title", "")
+        row = f"| {idx} | {title} |"
         rows.append(row)
     return header + sep + "\n".join(rows)
 
