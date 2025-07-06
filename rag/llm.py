@@ -13,7 +13,8 @@ def get_llm(base_url, api_key, model="deepseek-chat", temperature=0.5, max_token
         temperature=temperature,
         max_tokens=max_tokens, # type: ignore
         api_key=api_key,
-        base_url=base_url
+        base_url=base_url,
+        streaming=True,  # 显式启用流式支持（关键修改）
     )
 
 def _load_prompts():

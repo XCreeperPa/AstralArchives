@@ -44,6 +44,11 @@ def disable_temp_api_key(key):
     except Exception:
         pass
 
+# 新增：Token计数函数（与服务端保持一致）
+def count_tokens(text: str) -> int:
+    """简单的Token计数（示例实现，可替换为服务端同款）"""
+    return len(text.encode('utf-8')) // 4  # 近似：1token≈4字节（中文场景可调整）
+
 def main():
     console = Console()
     api_url = os.environ.get("AA_API_URL", "http://127.0.0.1:8080/v1/chat/completions")
@@ -96,14 +101,24 @@ def main():
                     console.print(f"[red]请求失败: {resp.status_code} {resp.text}")
                     continue
                 md_buffer = ""
-                completion_tokens = 0
+                # 关键修改：初始化Token统计变量
                 prompt_tokens = 0
+                completion_tokens = 0
                 total_tokens = 0
+                manual_completion_tokens = 0  # 手动累加的Token数
                 for line in resp.iter_lines(decode_unicode=True):
                     if not line or not line.startswith('data: '):
                         continue
                     chunk = line[6:]
                     if chunk.strip() == '[DONE]':
+                        # 尝试从最终chunk获取完整usage信息（如果服务端返回）
+                        try:
+                            final_data = json.loads(chunk)
+                            prompt_tokens = final_data.get('usage', {}).get('prompt_tokens', prompt_tokens)
+                            completion_tokens = final_data.get('usage', {}).get('completion_tokens', completion_tokens)
+                            total_tokens = prompt_tokens + completion_tokens
+                        except Exception:
+                            pass
                         break
                     try:
                         data = json.loads(chunk)
@@ -113,12 +128,19 @@ def main():
                     content = delta.get('content', '')
                     if content:
                         md_buffer += content
+                        manual_completion_tokens += count_tokens(content)
+                        progress.update(task, completed=manual_completion_tokens)
+                    # 更新Token统计（如果服务端返回部分信息）
                     usage = data.get('usage', {})
-                    completion_tokens = usage.get('completion_tokens', completion_tokens)
                     prompt_tokens = usage.get('prompt_tokens', prompt_tokens)
+                    completion_tokens = usage.get('completion_tokens', completion_tokens)
                     total_tokens = usage.get('total_tokens', total_tokens)
-                    progress.update(task, completed=completion_tokens)
-            # 输出token统计信息，但不在流式过程中输出token到控制台
+                # 若服务端未返回，使用手动累加值
+                if completion_tokens == 0:
+                    completion_tokens = manual_completion_tokens
+                    total_tokens = prompt_tokens + completion_tokens
+
+            # 输出token统计信息（已定义变量）
             console.print("\n[cyan]本轮Token统计：Prompt {}，Completion {}，Total {}[/cyan]".format(prompt_tokens, completion_tokens, total_tokens))
             console.print(Panel(f"[bold green]模型回复：[/bold green]\n", title="回复", subtitle="Markdown 渲染"))
             console.print(Markdown(md_buffer), soft_wrap=True)

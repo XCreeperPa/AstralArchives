@@ -1,29 +1,43 @@
 import os
 import sys
+import logging
+import time
+import json
+from functools import wraps
+from pathlib import Path
+from typing import List, Optional, Dict, Any, Generator, Union, AsyncGenerator
 from fastapi import FastAPI, Request, Header
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any, Generator
 from rag.llm import get_llm, extract_user_need
 from rag.db import search_db
 from rag.utils import load_llm_config, load_multi_llm_config
-from rag.rag_service import build_history_str, count_tokens
-from pathlib import Path
-import json
-from fastapi.middleware.cors import CORSMiddleware
+from rag.rag_service import count_tokens
 from config.apikey_db import init_db, check_api_key, add_token_usage
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.output_parsers import StrOutputParser
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+# CORS 配置
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 可根据需要指定前端域名
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# OpenAI Chat API request/response格式
+# 日志配置
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("AstralArchives")
+
+# 数据结构定义
 class Message(BaseModel):
     role: str
     content: str
@@ -32,11 +46,10 @@ class ChatCompletionRequest(BaseModel):
     model: str
     messages: List[Message]
     stream: Optional[bool] = False
-    # 其他参数全部忽略
 
 class Choice(BaseModel):
     index: int
-    message: Dict[str, Any]
+    message: Dict[str, Any] = Field(default_factory=lambda: {"role": "assistant", "content": ""})
     finish_reason: Optional[str] = "stop"
 
 class Usage(BaseModel):
@@ -47,161 +60,247 @@ class Usage(BaseModel):
 class ChatCompletionResponse(BaseModel):
     id: str = Field(default_factory=lambda: "chatcmpl-astralarchives")
     object: str = "chat.completion"
-    created: int = Field(default_factory=lambda: int(__import__('time').time()))
+    created: int = Field(default_factory=lambda: int(time.time()))
     model: str = "AstralArchives"
     choices: List[Choice]
     usage: Usage
 
-# Markdown表格生成，包含序号、元数据中的title和分类三列
+# 提示词模板
+RAG_PROMPT_TEMPLATE = """\
+{system_prompt}
+
+当前参考资料：
+{metadata_table}
+
+相关资料片段：
+{context}
+
+请基于上述资料回答：{question}
+"""
+
+BASIC_PROMPT_TEMPLATE = """\
+{system_prompt}
+
+用户问题：{question}
+"""
+
+# 性能监控装饰器
+def log_execution_time(func):
+    @wraps(func)
+    async def async_wrapper(*args, **kwargs):
+        start_time = time.time()
+        logger.info(f"Start {func.__name__}")
+        try:
+            result = await func(*args, **kwargs)
+            duration = time.time() - start_time
+            logger.info(f"Finish {func.__name__} in {duration:.2f}s")
+            return result
+        except Exception as e:
+            logger.error(f"Error in {func.__name__}: {str(e)}")
+            raise
+    return async_wrapper
+
+# 核心功能函数
+def format_messages(messages: List[Message]) -> List[Union[HumanMessage, AIMessage]]:
+    return [
+        HumanMessage(content=msg.content) if msg.role == "user" 
+        else AIMessage(content=msg.content)
+        for msg in messages
+    ]
+
 def meta_to_md_table(meta_list: List[dict]) -> str:
     if not meta_list:
-        return "无检索结果"
-    # 定义表头
-    header = "| 序号 | 标题 | 分类 |\n"
-    # 定义分隔行
-    sep = "| --- | --- | --- |\n"
-    rows = []
-    for idx, meta in enumerate(meta_list, start=1):
-        title = meta.get("title", "")
-        category = meta.get("category", "")
-        row = f"| {idx} | {title} | {category} |"
-        rows.append(row)
-    return header + sep + "\n".join(rows)
+        return ""
+    header = "| 序号 | 标题 | 分类 |\n| --- | --- | --- |\n"
+    rows = "\n".join(
+        f"| {idx} | {meta.get('title','无标题')[:25]} | {meta.get('category','未分类')} |"
+        for idx, meta in enumerate(meta_list, 1)
+    )
+    return header + rows
 
-# 拼接历史
-def get_history_from_messages(messages: List[Message]) -> str:
-    history = []
-    for m in messages[:-1]:
-        if m.role == "user":
-            history.append({"user": m.content, "assistant": ""})
-        elif m.role == "assistant":
-            if history:
-                history[-1]["assistant"] = m.content
-    # 只拼接到倒数第二条，最后一条为当前问题
-    return "\n".join([f"用户：{h['user']}\n分析师：{h['assistant']}" for h in history if h['user']])
+async def generate_response(
+    llm,
+    prompt_template: str,
+    system_prompt: str,
+    history_messages: List[Union[HumanMessage, AIMessage]],
+    question: str,
+    keyword: str = "",
+    metadata_table: str = "",
+    context: Optional[str] = None
+) -> AsyncGenerator[str, None]:
+    prompt = ChatPromptTemplate.from_template(prompt_template)
+    chain = prompt | llm | StrOutputParser()
+    
+    formatted_context = f"相关文档：\n{metadata_table}\n\n资料片段：\n{context}" if context else ""
+    
+    async for chunk in chain.astream({
+        "system_prompt": system_prompt,
+        "history": "\n".join(f"{msg.type}: {msg.content}" for msg in history_messages),
+        "keyword": keyword,
+        "metadata_table": metadata_table,
+        "context": formatted_context,
+        "question": question
+    }):
+        yield chunk
 
-# 启动时初始化API-KEY数据库
-init_db()
+@log_execution_time
+async def determine_retrieval_need(llm, question: str, history: list) -> bool:
+    prompt = """根据对话历史和当前问题，判断是否需要检索知识库：
+历史对话：
+{history}
+
+当前问题：{question}
+
+请用Y/N回答是否需要检索："""
+    
+    response = await llm.ainvoke(prompt.format(
+        history="\n".join([f"{msg.type}: {msg.content}" for msg in history]),
+        question=question
+    ))
+    return response.content.strip().upper() == "Y"
 
 @app.post("/v1/chat/completions")
+@log_execution_time
 async def chat_completions(req: ChatCompletionRequest, authorization: Optional[str] = Header(None)):
-    # API密钥校验
-    api_key_header = None
-    if authorization and authorization.startswith("Bearer "):
-        api_key_header = authorization[7:]
-    if not api_key_header or not check_api_key(api_key_header):
-        from config.apikey_db import get_key_status
-        status = get_key_status(api_key_header) if api_key_header else None
-        if status and status['total_tokens'] >= status['max_tokens']:
-            return JSONResponse(status_code=402, content={"error": {"message": f"API-KEY已超最大用量({status['max_tokens']})，请联系管理员续费或更换KEY。", "type": "usage_limit_exceeded"}})
-        return JSONResponse(status_code=401, content={"error": {"message": "无效API密钥", "type": "invalid_request_error"}})
-    if req.model != "AstralArchives":
-        return JSONResponse(status_code=400, content={"error": {"message": "仅支持 AstralArchives", "type": "invalid_request_error"}})
-    # 历史对话
-    history_str = get_history_from_messages(req.messages)
-    question = req.messages[-1].content
-    # LLM加载
-    base_url, api_key = load_llm_config()
-    llm_cfgs = load_multi_llm_config()
-    llm_list = [(get_llm(base_url, api_key, model, temperature=0.3), name) for base_url, api_key, model, name in llm_cfgs]
-    main_llm = llm_list[0][0]
-    # 1. LLM提取检索需求
-    user_need = extract_user_need(main_llm, question)
-    # 2. 检索数据库
-    meta_list = search_db(user_need, top_k=5)
-    # 3. 组装元数据表
-    meta_md = meta_to_md_table(meta_list)
-    # 4. 组装 context
-    db_zip_path = str(Path(__file__).parent / "db" / "wiki_allinone.zip")
-    from vector_api.main_embedding import load_from_zip
-    _, id2meta, id2content, _, _ = load_from_zip(db_zip_path)
-    context_list = []
-    used = set()
-    for meta in meta_list:
-        for idx2, m in id2meta.items():
-            if m == meta and idx2 not in used:
-                fragment = id2content[idx2]
-                context_list.append(fragment)
-                used.add(idx2)
-    merged_context = "\n".join(context_list)
-    if len(merged_context) > 60000:
-        merged_context = merged_context[:60000]
-    # 5. 构造最终prompt
-    with open(Path(__file__).parent / "config" / "prompts.json", "r", encoding="utf-8") as f:
-        prompts = json.load(f)
-    answer_with_rag_prompt = prompts.get("answer_with_rag_prompt",
-        "{system_prompt}\n\n{dialogue_history}\n\n用户问题：{question}\n\n{context_insert}\n\n请基于上述资料片段和历史对话，输出专业、结构化的分析。"
-    )
-    system_prompt = prompts.get("system_prompt", "")
-    dialogue_history_format = prompts.get("dialogue_history_format", "# 历史对话\n{history}")
-    context_insert_format = prompts.get("context_insert_format", "# 资料片段\n{context}")
-    dialogue_history = dialogue_history_format.format(history=history_str)
-    context_insert = context_insert_format.format(context=merged_context)
-    final_prompt = answer_with_rag_prompt.format(
-        system_prompt=system_prompt,
-        dialogue_history=dialogue_history,
-        question=question,
-        context_insert=context_insert
-    )
-    prompt_tokens = count_tokens(final_prompt)
-    # 6. LLM分析结果
-    def make_content():
-        # 三段式输出
-        yield f"[检索关键词]\n{user_need}\n\n"
-        yield f"[检索元数据]\n{meta_md}\n\n"
-    # 非流式
-    if not req.stream:
-        content = "".join(list(make_content()))
-        md_buffer = ""
-        completion_tokens = 0
-        stream = main_llm.stream(final_prompt)
-        for chunk in stream:
-            content_chunk = chunk.content if hasattr(chunk, 'content') else chunk
-            md_buffer += str(content_chunk)
-            completion_tokens += count_tokens(str(content_chunk))
-        content += f"[分析结果]\n{md_buffer}"
-        total_tokens = prompt_tokens + completion_tokens
-        # 记录token消耗
-        add_token_usage(api_key_header, total_tokens)
-        resp = ChatCompletionResponse(
-            choices=[Choice(index=0, message={"role": "assistant", "content": content})],
-            usage=Usage(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, total_tokens=total_tokens)
-        )
-        return resp
-    # 流式
-    def stream_gen() -> Generator[bytes, None, None]:
-        sent_tokens = 0
-        for part in make_content():
-            sent_tokens += count_tokens(part)
-            chunk = {
-                'id': 'chatcmpl-astralarchives',
-                'object': 'chat.completion.chunk',
-                'choices': [{
-                    'delta': {'role': 'assistant', 'content': part},
-                    'index': 0,
-                    'finish_reason': None
-                }],
-                'usage': {'prompt_tokens': prompt_tokens, 'completion_tokens': 0, 'total_tokens': prompt_tokens}
-            }
-            yield f"data: {json.dumps(chunk)}\n\n".encode()
-        # LLM流式
-        completion_tokens = 0
-        for chunk in main_llm.stream(final_prompt):
-            content_chunk = chunk.content if hasattr(chunk, 'content') else chunk
-            chunk_str = str(content_chunk)
-            completion_tokens += count_tokens(chunk_str)
-            chunk_data = {
-                'id': 'chatcmpl-astralarchives',
-                'object': 'chat.completion.chunk',
-                'choices': [{
-                    'delta': {'content': chunk_str},
-                    'index': 0,
-                    'finish_reason': None
-                }],
-                'usage': {'prompt_tokens': prompt_tokens, 'completion_tokens': completion_tokens, 'total_tokens': prompt_tokens + completion_tokens}
-            }
-            yield f"data: {json.dumps(chunk_data)}\n\n".encode()
-        # 结束信号前记录token消耗
-        add_token_usage(api_key_header, prompt_tokens + completion_tokens)
-        yield b"data: [DONE]\n\n"
-    return StreamingResponse(stream_gen(), media_type="text/event-stream")
+    logger.info(f"New request received. Messages count: {len(req.messages)}")
+    
+    try:
+        # API密钥校验
+        api_key_header = authorization.split("Bearer ")[-1] if authorization else None
+        if api_key_header:
+            logger.debug(f"API key header: {api_key_header[:6]}...")
+        
+        if not api_key_header or not check_api_key(api_key_header):
+            return JSONResponse(status_code=401, content={"error": "无效API密钥"})
+
+        # 初始化处理流程
+        history_messages = format_messages(req.messages[:-1])
+        current_question = req.messages[-1].content
+        
+        # 加载配置
+        base_url, api_key = load_llm_config()
+        llm_cfgs = load_multi_llm_config()
+        main_llm = get_llm(base_url, api_key, temperature=0.3)
+        
+        # 动态检索判断
+        need_retrieval = await determine_retrieval_need(main_llm, current_question, history_messages)
+        
+        # 知识库检索流程
+        merged_context = ""
+        user_need = ""
+        meta_list = []
+        meta_md = ""
+        if need_retrieval:
+            user_need = extract_user_need(main_llm, current_question)
+            logger.info(f"Starting retrieval with user_need: {user_need}")
+            
+            logger.debug(f"Searching DB with query: {user_need}")
+            meta_list = search_db(user_need, top_k=5)
+            logger.info(f"Found {len(meta_list)} metadata entries")
+            
+            # 构建上下文
+            db_zip_path = Path(__file__).parent / "db" / "wiki_allinone.zip"
+            from vector_api.main_embedding import load_from_zip
+            _, id2meta, id2content, _, _ = load_from_zip(str(db_zip_path))
+            
+            context_list = []
+            used = set()
+            for meta in meta_list:
+                for idx, m in id2meta.items():
+                    if m == meta and idx not in used:
+                        context_list.append(id2content[idx])
+                        used.add(idx)
+            merged_context = "\n".join(context_list)[:60000]
+            meta_md = meta_to_md_table(meta_list)
+
+        # 加载提示词配置
+        with open(Path(__file__).parent / "config" / "prompts.json") as f:
+            prompts = json.load(f)
+
+        # 流式响应处理
+        if req.stream:
+            async def stream_generator():
+                full_content = ""
+                
+                # 预发送元数据
+                if need_retrieval:
+                    metadata_chunk = json.dumps({
+                        "id": "chatcmpl-astralarchives",
+                        "object": "chat.completion.chunk",
+                        "choices": [{
+                            "delta": {
+                                "content": f"# 检索关键词\n{user_need}\n\n# 相关文档\n{meta_md}\n\n",
+                                "metadata": {
+                                    "search_used": True,
+                                    "keywords": user_need.split(','),
+                                    "doc_count": len(meta_list)
+                                }
+                            },
+                            "index": 0,
+                            "finish_reason": None
+                        }]
+                    }, ensure_ascii=False)
+                    yield f"data: {metadata_chunk}\n\n"
+                
+                # 流式生成内容
+                async for chunk in generate_response(
+                    llm=main_llm,
+                    prompt_template=RAG_PROMPT_TEMPLATE if need_retrieval else BASIC_PROMPT_TEMPLATE,
+                    system_prompt=prompts.get("system_prompt", ""),
+                    history_messages=history_messages,
+                    question=current_question,
+                    keyword=user_need,
+                    metadata_table=meta_md,
+                    context=merged_context
+                ):
+                    full_content += chunk
+                    yield f"""data: {json.dumps({
+                        'id': 'chatcmpl-astralarchives',
+                        'object': 'chat.completion.chunk',
+                        'choices': [{
+                            'delta': {'content': chunk},
+                            'index': 0,
+                            'finish_reason': None
+                        }]
+                    }, ensure_ascii=False)}\n\n"""
+                
+                yield "data: [DONE]\n\n"
+            
+            return StreamingResponse(stream_generator(), media_type="text/event-stream")
+        
+        # 非流式响应
+        else:
+            full_response = ""
+            if need_retrieval:
+                full_response += f"检索关键词：{user_need}\n\n相关文档：\n{meta_md}\n\n"
+            
+            async for chunk in generate_response(
+                llm=main_llm,
+                prompt_template=RAG_PROMPT_TEMPLATE if need_retrieval else BASIC_PROMPT_TEMPLATE,
+                system_prompt=prompts.get("system_prompt", ""),
+                history_messages=history_messages,
+                question=current_question,
+                keyword=user_need,
+                metadata_table=meta_md,
+                context=merged_context
+            ):
+                full_response += chunk
+            
+            prompt_tokens = count_tokens(full_response)
+            completion_tokens = count_tokens(full_response)
+            
+            return ChatCompletionResponse(
+                choices=[Choice(index=0, message={"role": "assistant", "content": full_response})],
+                usage=Usage(
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    total_tokens=prompt_tokens + completion_tokens
+                )
+            )
+
+    except Exception as e:
+        logger.error(f"Critical error processing request: {str(e)}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": "内部服务器错误"})
+
+# 初始化API密钥数据库
+init_db()
