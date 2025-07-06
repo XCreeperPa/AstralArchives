@@ -16,6 +16,7 @@ dependencies = [
     "faiss-cpu",
     "nest_asyncio",
     "langchain",
+    "langchain_openai",
     "langchain_community",
     "openai",
     "tiktoken",

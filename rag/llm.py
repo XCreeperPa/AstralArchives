@@ -2,7 +2,8 @@
 """
 LLM相关接口，便于后续切换模型或多模型支持。
 """
-from langchain_community.chat_models import ChatOpenAI
+# 从 langchain_openai 导入 ChatOpenAI
+from langchain_openai import ChatOpenAI
 import json
 from pathlib import Path
 
@@ -10,7 +11,7 @@ def get_llm(base_url, api_key, model="deepseek-chat", temperature=0.5, max_token
     return ChatOpenAI(
         model=model,
         temperature=temperature,
-        max_tokens=max_tokens,
+        max_tokens=max_tokens, # type: ignore
         api_key=api_key,
         base_url=base_url
     )
