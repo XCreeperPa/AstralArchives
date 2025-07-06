@@ -11,6 +11,7 @@ from rag.rag_service import build_history_str, count_tokens
 from pathlib import Path
 import json
 from fastapi.middleware.cors import CORSMiddleware
+from config.apikey_db import init_db, check_api_key, add_token_usage
 
 app = FastAPI()
 
@@ -79,13 +80,20 @@ def get_history_from_messages(messages: List[Message]) -> str:
     # 只拼接到倒数第二条，最后一条为当前问题
     return "\n".join([f"用户：{h['user']}\n分析师：{h['assistant']}" for h in history if h['user']])
 
+# 启动时初始化API-KEY数据库
+init_db()
+
 @app.post("/v1/chat/completions")
 async def chat_completions(req: ChatCompletionRequest, authorization: Optional[str] = Header(None)):
     # API密钥校验
-    api_key = None
+    api_key_header = None
     if authorization and authorization.startswith("Bearer "):
-        api_key = authorization[7:]
-    if api_key != "test":
+        api_key_header = authorization[7:]
+    if not api_key_header or not check_api_key(api_key_header):
+        from config.apikey_db import get_key_status
+        status = get_key_status(api_key_header) if api_key_header else None
+        if status and status['total_tokens'] >= status['max_tokens']:
+            return JSONResponse(status_code=402, content={"error": {"message": f"API-KEY已超最大用量({status['max_tokens']})，请联系管理员续费或更换KEY。", "type": "usage_limit_exceeded"}})
         return JSONResponse(status_code=401, content={"error": {"message": "无效API密钥", "type": "invalid_request_error"}})
     if req.model != "AstralArchives":
         return JSONResponse(status_code=400, content={"error": {"message": "仅支持 AstralArchives", "type": "invalid_request_error"}})
@@ -153,6 +161,8 @@ async def chat_completions(req: ChatCompletionRequest, authorization: Optional[s
             completion_tokens += count_tokens(str(content_chunk))
         content += f"[分析结果]\n{md_buffer}"
         total_tokens = prompt_tokens + completion_tokens
+        # 记录token消耗
+        add_token_usage(api_key_header, total_tokens)
         resp = ChatCompletionResponse(
             choices=[Choice(index=0, message={"role": "assistant", "content": content})],
             usage=Usage(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, total_tokens=total_tokens)
@@ -176,8 +186,7 @@ async def chat_completions(req: ChatCompletionRequest, authorization: Optional[s
             yield f"data: {json.dumps(chunk)}\n\n".encode()
         # LLM流式
         completion_tokens = 0
-        stream = main_llm.stream(final_prompt)
-        for chunk in stream:
+        for chunk in main_llm.stream(final_prompt):
             content_chunk = chunk.content if hasattr(chunk, 'content') else chunk
             chunk_str = str(content_chunk)
             completion_tokens += count_tokens(chunk_str)
@@ -192,6 +201,7 @@ async def chat_completions(req: ChatCompletionRequest, authorization: Optional[s
                 'usage': {'prompt_tokens': prompt_tokens, 'completion_tokens': completion_tokens, 'total_tokens': prompt_tokens + completion_tokens}
             }
             yield f"data: {json.dumps(chunk_data)}\n\n".encode()
-        # 结束信号
+        # 结束信号前记录token消耗
+        add_token_usage(api_key_header, prompt_tokens + completion_tokens)
         yield b"data: [DONE]\n\n"
     return StreamingResponse(stream_gen(), media_type="text/event-stream")

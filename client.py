@@ -11,6 +11,7 @@ from rich.markdown import Markdown
 from rich.table import Table
 from rich.prompt import Prompt
 from rich.progress import Progress, SpinnerColumn, TextColumn
+import time
 
 def better_file_input(prompt):
     with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.txt') as f:
@@ -28,10 +29,36 @@ def better_file_input(prompt):
     print(f"\n您输入的内容是: {content}")
     return content
 
+def get_temp_api_key():
+    # 动态生成临时key，设置5分钟过期时间
+    try:
+        from config.apikey_db import add_api_key
+        expire_at = int(time.time()) + 300  # 5分钟后过期
+        key = add_api_key("client临时测试", expire_at)
+        return key
+    except Exception as e:
+        return None
+
+def disable_temp_api_key(key):
+    try:
+        from config.apikey_db import disable_api_key
+        disable_api_key(key)
+    except Exception:
+        pass
+
 def main():
     console = Console()
     api_url = os.environ.get("AA_API_URL", "http://127.0.0.1:8080/v1/chat/completions")
-    api_key = os.environ.get("AA_API_KEY", "test")
+    api_key = os.environ.get("AA_API_KEY")
+    temp_key = None
+    if not api_key:
+        temp_key = get_temp_api_key()
+        if temp_key:
+            api_key = temp_key
+            console.print("[yellow]未检测到环境变量AA_API_KEY，已自动生成临时测试KEY。[/yellow]")
+        else:
+            console.print("[red]未检测到API-KEY，且无法生成临时KEY。请先生成API-KEY并设置AA_API_KEY环境变量。[/red]")
+            sys.exit(1)
     model = "AstralArchives"
     history = []
     console.print(Panel("[bold cyan]AstralArchives API 测试客户端 (Ctrl+C 退出)[/bold cyan]", title="欢迎"))
@@ -100,6 +127,11 @@ def main():
             history.append({"user": question, "assistant": md_buffer})
         except Exception as e:
             console.print(f"[red]请求异常: {e}")
+        finally:
+            if temp_key:
+                disable_temp_api_key(temp_key)
+                temp_key = get_temp_api_key()
+                api_key = temp_key
 
 if __name__ == "__main__":
     main()

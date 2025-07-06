@@ -28,3 +28,4 @@ config/api_keys.json
 tests/
 output/
 output.md
+config/api_keys.db
