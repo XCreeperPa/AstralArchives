@@ -31,13 +31,11 @@ def better_file_input(prompt):
 
 def get_temp_api_key():
     # 动态生成临时key，设置5分钟过期时间
-    try:
-        from config.apikey_db import add_api_key
-        expire_at = int(time.time()) + 300  # 5分钟后过期
-        key = add_api_key("client临时测试", expire_at)
-        return key
-    except Exception as e:
-        return None
+    from config.apikey_db import add_api_key
+    expire_at = int(time.time()) + 300  # 5分钟后过期
+    key = add_api_key("client临时测试", expire_at)
+    return key
+
 
 def disable_temp_api_key(key):
     try:
