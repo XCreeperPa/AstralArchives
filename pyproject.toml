@@ -8,7 +8,6 @@ authors = [
 license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
-    "pymilvus",
     "httpx",
     "rich",
     "aiofiles",
